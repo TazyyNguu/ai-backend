@@ -1,10 +1,10 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import joblib
-import numpy as np
 
 app = Flask(__name__)
-CORS(app)
+
+# CHO PHÉP TẤT CẢ DOMAIN
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 model = joblib.load("model.pkl")
 encoders = joblib.load("encoders.pkl")
