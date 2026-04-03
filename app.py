@@ -6,15 +6,8 @@ import numpy as np
 app = Flask(__name__)
 CORS(app)
 
-# load model + encoder
 model = joblib.load("model.pkl")
 encoders = joblib.load("encoders.pkl")
-
-# nếu có scaler
-try:
-    scaler = joblib.load("scaler.pkl")
-except:
-    scaler = None
 
 @app.route("/")
 def home():
@@ -25,23 +18,20 @@ def predict():
     try:
         data = request.json["data"]
 
-        # chuyển list → numpy
-        features = np.array(data).reshape(1, -1)
+        # encode 3 cột string KDD
+        data[1] = encoders["protocol_type"].transform([data[1]])[0]
+        data[2] = encoders["service"].transform([data[2]])[0]
+        data[3] = encoders["flag"].transform([data[3]])[0]
 
-        # nếu có scaler
-        if scaler:
-            features = scaler.transform(features)
+        # bỏ label + difficulty nếu user gửi nhầm
+        if len(data) > 41:
+            data = data[:41]
 
-        prediction = model.predict(features)[0]
+        features = np.array(data).astype(float).reshape(1, -1)
 
-        return jsonify({
-            "result": str(prediction)
-        })
+        result = model.predict(features)[0]
+
+        return jsonify({"result": str(result)})
 
     except Exception as e:
-        return jsonify({
-            "error": str(e)
-        })
-
-if __name__ == "__main__":
-    app.run()
+        return jsonify({"error": str(e)})
