@@ -1,11 +1,14 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+import joblib
+import numpy as np
 
 app = Flask(__name__)
 
-# CHO PHÉP TẤT CẢ DOMAIN
+# CORS chuẩn
 CORS(app, resources={r"/*": {"origins": "*"}})
 
+# load model
 model = joblib.load("model.pkl")
 encoders = joblib.load("encoders.pkl")
 
@@ -16,18 +19,20 @@ def home():
 @app.route("/predict", methods=["POST"])
 def predict():
     try:
-        data = request.json["data"]
+        data = request.json.get("data")
+
+        if not data:
+            return jsonify({"error": "No data provided"})
 
         # encode 3 cột string KDD
         data[1] = encoders["protocol_type"].transform([data[1]])[0]
         data[2] = encoders["service"].transform([data[2]])[0]
         data[3] = encoders["flag"].transform([data[3]])[0]
 
-        # bỏ label + difficulty nếu user gửi nhầm
-        if len(data) > 41:
-            data = data[:41]
+        # chỉ lấy 41 feature
+        data = data[:41]
 
-        features = np.array(data).astype(float).reshape(1, -1)
+        features = np.array(data, dtype=float).reshape(1, -1)
 
         result = model.predict(features)[0]
 
@@ -35,3 +40,7 @@ def predict():
 
     except Exception as e:
         return jsonify({"error": str(e)})
+
+# bắt buộc cho render local test
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=10000)
